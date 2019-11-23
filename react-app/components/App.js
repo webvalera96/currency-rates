@@ -53,7 +53,7 @@ class App extends Component {
                   <small><em>Разработал</em>: Цыплаков Валерий Сергеевич (<a href="mailto:webvalera96@gmail.com">webvalera96@gmail.com</a>)</small>
                 </div>
                 <div>
-                  <small><em>Репозиторий</em>: </small>
+                  <small><em>Репозиторий</em>: <a href="https://github.com/webvalera96/currency-rates">https://github.com/webvalera96/currency-rates</a></small>
                 </div>
 
             </div>

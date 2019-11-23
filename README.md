@@ -46,7 +46,13 @@
 git clone https://github.com/webvalera96/currency-rates.git
 cd currency-rates
 npm install
-npm build
+npm run-script build
 npm start
 ```
 Веб приложение доступно по адресу [http://<your_domain_name>:3000](http://localhost:3000)
+
+#### Демонстрационная версия
+
+Развернутая версия веб-приложения доступна по адресу
+
+http://alittlebasic.ru:3000/
