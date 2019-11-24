@@ -152,6 +152,9 @@ class App extends Component {
                 <div>
                   <small><em>Репозиторий</em>: <a href="https://github.com/webvalera96/currency-rates">https://github.com/webvalera96/currency-rates</a></small>
                 </div>
+                <div>
+                  <small><em>Agendash:</em>: <a href="/dash">Управление автоматической выгрузкой</a></small>
+                </div>
 
             </div>
           </Col>
@@ -265,6 +268,9 @@ class QuotesDataTables extends Component {
 
     axios.get(`/quotes?date_req=${date.format("DD/MM/YYYY")}`)
       .then(function(response) {
+
+
+
         // добавить новую точку на график
         this.props.onUpdateChart();
 
@@ -310,6 +316,13 @@ class QuotesDataTables extends Component {
           ]
         });
 
+
+
+      }.bind(this)).catch(function(err) {
+        if (err.response.status === 404) {
+          let table = $('#quotes-table').DataTable();
+          table.clear().draw();
+        }
       }.bind(this));
 
 

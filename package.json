@@ -8,6 +8,8 @@
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
+    "agenda": "^2.1.0",
+    "agendash": "^1.0.0",
     "axios": "^0.19.0",
     "bootstrap": "^4.3.1",
     "chart.js": "^2.9.3",
