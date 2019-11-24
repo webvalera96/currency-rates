@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-    entry: './react-app/index.js',
+    entry: ["core-js/stable", "regenerator-runtime/runtime",'./react-app/index.js'],
     devtool: "source-map",
     output: {
         filename: 'main.js',
@@ -13,7 +13,21 @@ module.exports = {
                 test: /\.js$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: "babel-loader"
+                    loader: "babel-loader",
+                    options: {
+                        "presets": [
+                            [
+                                "@babel/preset-env",
+                                {
+                                    "targets": {
+                                        "chrome": "58",
+                                        "ie": "11"
+                                    }
+                                }
+                            ],
+                            "@babel/preset-react"
+                        ]
+                    }
                 },
             },
             {

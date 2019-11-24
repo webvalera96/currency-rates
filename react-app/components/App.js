@@ -7,9 +7,10 @@ import {
 import axios from 'axios';
 import 'react-dates/initialize';
 import {SingleDatePicker,DateRangePicker, isInclusivelyBeforeDay} from "react-dates";
-import Chart from 'chart.js';
-
+import {Line} from 'react-chartjs-2';
 import moment from 'moment';
+
+
 moment.locale('ru');
 
 import 'datatables.net-bs4/js/dataTables.bootstrap4';
@@ -23,6 +24,91 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.clearDb = this.clearDb.bind(this);
+    this.datesChange = this.datesChange.bind(this);
+
+    this.state = {
+      fclist: null,
+      currency: null,
+      startDate: moment(new Date()).subtract(30, 'days'),
+      endDate: moment(new Date()),
+      focusedInput: null,
+
+      // данные для компонента CurrencyChartReport
+      jsonReport: null,
+      chartData: null
+    };
+
+    this.componentDidMount = this.componentDidMount.bind(this);
+    this.datesChange = this.datesChange.bind(this);
+    this.currencySelectChange = this.currencySelectChange.bind(this);
+    this.updateChartReport = this.updateChartReport.bind(this);
+    this.updateChart = this.updateChart.bind(this);
+  }
+
+  updateChart() {
+    this.updateChartReport(this.state.startDate, this.state.endDate, this.state.currency);
+  }
+
+  updateChartReport(startDate, endDate, currency) {
+    if (startDate && endDate && currency) {
+      let query = `begin_date=${startDate.format("DD/MM/YYYY")}&end_date=${endDate.format("DD/MM/YYYY")}&char_code=${currency}`;
+
+      // отобразим отчет в формате JSON (для просмотра)
+      axios.get(`/report?${query}`)
+        .then(function(response) {
+          let reportJSON = JSON.stringify(response.data, undefined, 2);
+          this.setState({
+            jsonReport: reportJSON
+          });
+        }.bind(this));
+
+      // получим данные для построения графика и построим график
+      axios.get(`/chart/get/dataset?${query}`)
+        .then(function(response) {
+          let dataSet = response.data;
+          this.setState({
+            chartData: {
+              labels: dataSet.dates,
+              datasets: [{
+                label: this.state.currency,
+                data: dataSet.values,
+                backgroundColor: [
+                  'rgba(255, 99, 132, 0.2)',
+                  'rgba(54, 162, 235, 0.2)',
+                  'rgba(255, 206, 86, 0.2)',
+                  'rgba(75, 192, 192, 0.2)',
+                  'rgba(153, 102, 255, 0.2)',
+                  'rgba(255, 159, 64, 0.2)'
+                ],
+                borderColor: [
+                  'rgba(255, 99, 132, 1)',
+                  'rgba(54, 162, 235, 1)',
+                  'rgba(255, 206, 86, 1)',
+                  'rgba(75, 192, 192, 1)',
+                  'rgba(153, 102, 255, 1)',
+                  'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+              }]
+            }
+          });
+        }.bind(this));
+    }
+  }
+
+  componentDidMount() {
+    axios.get('/fc/list')
+      .then(function (response) {
+        const fclist = response.data.data;
+        this.setState({
+          fclist: fclist.map(function(fc, index) {
+            return <option id={index} value={`${fc[1]}`}>{`${fc[0]} (${fc[1]})`}</option>
+          }),
+          currency: fclist[0][1]
+        });
+
+        this.updateChartReport(this.state.startDate, this.state.endDate, fclist[0][1])
+      }.bind(this));
   }
 
   clearDb(event) {
@@ -31,20 +117,31 @@ class App extends Component {
       .then(function(response) {
         if (response.status === 200) {
           alert('Хранилище очищено. Страница будет перезагружена.');
-
         } else {
           alert('Ошибка при очистке хранилища. Страница будет перезагружена.');
         }
         document.location.reload();
       })
   }
+
+  datesChange(dateRange) {
+    const { startDate, endDate } = dateRange;
+    this.setState({ startDate, endDate });
+    this.updateChartReport(startDate, endDate, this.state.currency);
+  }
+
+  currencySelectChange(event) {
+    this.setState({
+      currency: event.target.value
+    });
+    this.updateChartReport(this.state.startDate, this.state.endDate, event.target.value);
+  }
+
+
   render() {
     return (
       <Container fluid={true}>
-        <Row style={{
-          borderBottom: "solid 2px",
-          paddingBottom: "5px"
-        }}>
+        <Row>
           <Col>
             <div >
 
@@ -60,18 +157,72 @@ class App extends Component {
           </Col>
         </Row>
         <Row >
-          <Col style={{
-            borderBottom: "solid 2px",
-            paddingBottom: "5px"
-          }}>
-            <QuotesDataTables />
+          <Col lg={6} xl={6} md={12} sm={12}  xs={12}>
+            <QuotesDataTables onUpdateChart={this.updateChart}/>
           </Col>
-          <Col style={{
-            borderBottom: "solid 2px",
-            paddingBottom: "5px"
-          }}>
-            <CurrencyChart />
+          <Col lg={6} xl={6} md={12} sm={12}  xs={12}>
+            <Row>
+              <Col lg={6} xl={6} md={6} sm={12}  xs={12}>
+                <Form.Row>
+                  <Form.Group as={Col}>
+                    <Form.Label>
+                      Валюта
+                    </Form.Label>
+                    <Form.Control id="currency" name="currency" as="select" onChange={this.currencySelectChange}>
+                      {this.state.fclist}
+                    </Form.Control>
+                  </Form.Group>
+
+                  <Form.Group as={Col}>
+                    <Form.Label>
+                      Период
+                    </Form.Label>
+                    <Form.Row>
+                      <DateRangePicker
+                        startDate={this.state.startDate}
+                        startDateId="startDateId"
+                        endDate={this.state.endDate}
+                        endDateId="endDateId"
+                        onDatesChange={this.datesChange}
+                        focusedInput={this.state.focusedInput}
+                        onFocusChange={focusedInput => this.setState({ focusedInput })}
+                        block={false}
+                        small={true}
+                        startDatePlaceholderText="Нач. дата"
+                        endDatePlaceholderText="Кон. дата"
+                        isOutsideRange={day => !isInclusivelyBeforeDay(day, moment())}
+                      />
+                    </Form.Row>
+                  </Form.Group>
+                </Form.Row>
+                <Row>
+                {
+                  this.state.chartData &&
+                  <CurrencyChart
+                    chartData={this.state.chartData}
+                  />
+                }
+                </Row>
+              </Col>
+              <Col lg={6} xl={6} md={6} sm={12}  xs={12}>
+                <Row>
+                  <h3>Отчет в формате JSON</h3>
+                </Row>
+                <pre id="jsonReport">
+                  {this.state.jsonReport}
+                </pre>
+                {
+                  this.state.startDate && this.state.endDate &&
+                  <a download="report.json" href={`/report?begin_date=${this.state.startDate.format("DD/MM/YYYY")}&end_date=${this.state.endDate.format("DD/MM/YYYY")}&char_code=${this.state.currency}`}>
+                    Скачать отчет
+                  </a>
+                }
+              </Col>
+            </Row>
           </Col>
+        </Row>
+        <Row>
+
         </Row>
         <Row>
           <Button style={{
@@ -111,47 +262,57 @@ class QuotesDataTables extends Component {
   }
 
   updateDataTable(date) {
-    $('#quotes-table').DataTable({
-      "AutoWidth": false,
-      "destroy": true,
-      "ajax": `/quotes?date_req=${date.format("DD/MM/YYYY")}`,
-      "language":  {
-        "processing": "Подождите...",
-        "search": "Поиск:",
-        "lengthMenu": "Показать _MENU_ записей",
-        "info": "Записи с _START_ до _END_ из _TOTAL_ записей",
-        "infoEmpty": "Записи с 0 до 0 из 0 записей",
-        "infoFiltered": "(отфильтровано из _MAX_ записей)",
-        "infoPostFix": "",
-        "loadingRecords": "Загрузка записей...",
-        "zeroRecords": "Записи отсутствуют.",
-        "emptyTable": "В таблице отсутствуют данные",
-        "paginate": {
-          "first": "Первая",
-          "previous": "Предыдущая",
-          "next": "Следующая",
-          "last": "Последняя"
-        },
-        "aria": {
-          "sortAscending": ": активировать для сортировки столбца по возрастанию",
-          "sortDescending": ": активировать для сортировки столбца по убыванию"
-        },
-        "select": {
-          "rows": {
-            "_": "Выбрано записей: %d",
-            "0": "Кликните по записи для выбора",
-            "1": "Выбрана одна запись"
-          }
-        }
-      },
-      "columns": [
-        {"type": "num"},
-        {"type": "string"},
-        {"type": "num"},
-        {"type": "string"},
-        {"type": "num"}
-      ]
-    });
+
+    axios.get(`/quotes?date_req=${date.format("DD/MM/YYYY")}`)
+      .then(function(response) {
+        // добавить новую точку на график
+        this.props.onUpdateChart();
+
+        $('#quotes-table').DataTable({
+          "destroy": true,
+          "autoWidth": false,
+          data: response.data.data,
+          "language":  {
+            "processing": "Подождите...",
+            "search": "Поиск:",
+            "lengthMenu": "Показать _MENU_ записей",
+            "info": "Записи с _START_ до _END_ из _TOTAL_ записей",
+            "infoEmpty": "Записи с 0 до 0 из 0 записей",
+            "infoFiltered": "(отфильтровано из _MAX_ записей)",
+            "infoPostFix": "",
+            "loadingRecords": "Загрузка записей...",
+            "zeroRecords": "Записи отсутствуют.",
+            "emptyTable": "В таблице отсутствуют данные",
+            "paginate": {
+              "first": "Первая",
+              "previous": "Предыдущая",
+              "next": "Следующая",
+              "last": "Последняя"
+            },
+            "aria": {
+              "sortAscending": ": активировать для сортировки столбца по возрастанию",
+              "sortDescending": ": активировать для сортировки столбца по убыванию"
+            },
+            "select": {
+              "rows": {
+                "_": "Выбрано записей: %d",
+                "0": "Кликните по записи для выбора",
+                "1": "Выбрана одна запись"
+              }
+            }
+          },
+          "columns": [
+            {"type": "num"},
+            {"type": "string"},
+            {"type": "num"},
+            {"type": "string"},
+            {"type": "num"}
+          ]
+        });
+
+      }.bind(this));
+
+
   }
 
   dateChange(date) {
@@ -161,7 +322,7 @@ class QuotesDataTables extends Component {
 
   render() {
     return (
-      <Container>
+      <Container fluid={true}>
         <Row>
           <Col>
             <Form>
@@ -170,6 +331,7 @@ class QuotesDataTables extends Component {
                   <Form.Label>
                     Дата
                   </Form.Label>
+
                   <SingleDatePicker
                     date={this.state.date}
                     onDateChange={this.dateChange}
@@ -206,247 +368,38 @@ class QuotesDataTables extends Component {
   }
 }
 
+
 class CurrencyChart extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      chart: null,
-      fclist: null,
 
-      currency: null,
-      startDate: moment(new Date()).subtract(30, 'days'),
-      endDate: moment(new Date()),
-      focusedInput: null,
-      jsonReport: ''
-    };
-
-    this.componentDidMount = this.componentDidMount.bind(this);
-    this.currencySelectChange = this.currencySelectChange.bind(this);
-    this.updateChart = this.updateChart.bind(this);
-    this.plotChart = this.plotChart.bind(this);
-
-  }
-
-  componentDidMount() {
-    const ctx = $('#currencyChart');
-
-    axios.get('/fc/list')
-      .then(function (response) {
-        const fclist = response.data.data;
-        this.setState({
-          fclist: fclist.map(function(fc, index) {
-            return <option id={index} value={`${fc[1]}`}>{`${fc[0]} (${fc[1]})`}</option>
-          }),
-          currency: fclist[0][1]
-        });
-        this.plotChart(this.state.startDate, this.state.endDate, fclist[0][1]);
-      }.bind(this));
-
-    this.setState({
-      chart:  new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-          datasets: [{
-            label: '# of Votes',
-            data: [12, 19, 3, 5, 2, 3],
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.2)',
-              'rgba(54, 162, 235, 0.2)',
-              'rgba(255, 206, 86, 0.2)',
-              'rgba(75, 192, 192, 0.2)',
-              'rgba(153, 102, 255, 0.2)',
-              'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              }
-            }]
+    this.options = {
+      responsive: true,
+      scales: {
+        yAxes: [{
+          ticks: {
+            beginAtZero: false
           }
-        }
-      })
-    })
-  }
-
-  makeReport(dataSet, currency) {
-    let report = {
-      [currency] : []
-    };
-
-    for(let i = 0; i < dataSet.dates.length; i++) {
-      report[currency].push({
-        "date": dataSet.dates[i],
-        "value": dataSet.values[i]
-      });
+        }]
+      }
     }
-    return JSON.stringify(report, undefined, 2)
-  }
-
-  plotChart(startDate, endDate, currency) {
-    if (startDate && endDate && currency) {
-      axios.get(`/chart/get/dataset?begin_date=${startDate.format("DD/MM/YYYY")}&end_date=${endDate.format("DD/MM/YYYY")}&char_code=${currency}`)
-        .then(function(response) {
-          let dataSet = response.data;
-
-
-          // обработаем полученные данные для построения графика
-          dataSet.values = dataSet.values.map(function(value) {
-            return Number.parseFloat(value);
-          });
-
-          for(let i = 0; i < dataSet.dates.length-1; i++) {
-            for(let j = 0; j < dataSet.dates.length-i; j++)
-            {
-              if (moment(dataSet.dates[j+1], "DD/MM/YYYY").toDate() < moment(dataSet.dates[j], "DD/MM/YYYY").toDate()) {
-                // меняем даты
-                let temp = dataSet.dates[j+1];
-                dataSet.dates[j+1] = dataSet.dates[j];
-                dataSet.dates[j] = temp;
-
-                // меняем данные
-                temp = dataSet.values[j+1];
-                dataSet.values[j+1] = dataSet.values[j];
-                dataSet.values[j] = temp;
-              }
-            }
-          }
-
-          // сформируем отчет в формате JSON
-          this.setState({
-            jsonReport: this.makeReport(dataSet, currency)
-          });
-
-          // перестроим график, в соответствии с полученными данными
-          this.state.chart.destroy();
-
-          const ctx = document.getElementById('currencyChart');
-          this.setState({
-            chart:  new Chart(ctx, {
-              type: 'line',
-              data: {
-                labels: dataSet.dates,
-                datasets: [{
-                  label: currency,
-                  data: dataSet.values,
-                  backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)'
-                  ],
-                  borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                  ],
-                  borderWidth: 1
-                }]
-              },
-              options: {
-                responsive: true,
-                scales: {
-                  yAxes: [{
-                    ticks: {
-                      beginAtZero: false
-                    }
-                  }]
-                }
-              }
-            })
-          });
-        }.bind(this));
-    } else {
-      alert('Не заданы параметры построения графика!');
-    }
-  }
-
-  updateChart(event) {
-    event.preventDefault();
-    const startDate = this.state.startDate;
-    const endDate = this.state.endDate;
-    const currency = this.state.currency;
-    this.plotChart(startDate, endDate, currency);
-  }
-
-  currencySelectChange(event) {
-    this.setState({
-      currency: event.target.value
-    });
   }
 
   render() {
     return (
-      <React.Fragment>
-        <Form>
-          <Form.Row>
-            <Form.Group as={Col}>
-              <Form.Label>
-                Валюта
-              </Form.Label>
-              <Form.Control id="currency" name="currency" as="select" onChange={this.currencySelectChange}>
-                {this.state.fclist}
-              </Form.Control>
-            </Form.Group>
-
-            <Form.Group as={Col}>
-              <Form.Label>
-                Период
-              </Form.Label>
-              <DateRangePicker
-                startDate={this.state.startDate}
-                startDateId="startDateId"
-                endDate={this.state.endDate}
-                endDateId="endDateId"
-                onDatesChange={({ startDate, endDate }) => this.setState({ startDate, endDate })}
-                focusedInput={this.state.focusedInput}
-                onFocusChange={focusedInput => this.setState({ focusedInput })}
-                block={true}
-                small={true}
-                startDatePlaceholderText="Нач. дата"
-                endDatePlaceholderText="Кон. дата"
-                isOutsideRange={day => !isInclusivelyBeforeDay(day, moment())}
-              />
-
-            </Form.Group>
-
-          </Form.Row>
-          <Form.Row>
-            <Form.Group as={Col}>
-              <Button type="primary" onClick={this.updateChart}>Построить график</Button>
-            </Form.Group>
-          </Form.Row>
-        </Form>
-        <Row>
-          <Col md={6}>
-            <canvas id="currencyChart" width="400px" height="400px"></canvas>
-          </Col>
-          <Col md={6}>
-            <h2>Отчет в формате JSON</h2>
-            <pre id="jsonReport">
-              {this.state.jsonReport}
-            </pre>
-          </Col>
-        </Row>
-      </React.Fragment>
+      <Line
+        data={this.props.chartData}
+        options={
+          {
+            scales: {
+              yAxes: [{
+                ticks: {
+                  beginAtZero: false
+                }
+              }]
+            }
+          }
+        }/>
     )
   }
 }

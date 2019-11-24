@@ -14,7 +14,7 @@ const db = level('db');
 
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
 let {
-  httpGet
+  httpGet, chartGetDataset, makeReport
 } = require('../lib/mylib')(request, iconv);
 
 let {
@@ -37,86 +37,25 @@ router.get('/quotes', function(req, res, next) {
 
   getQuotesByDate(objectDate).then(() => {
     db.get(stringDate, function(err, valutes) {
-      //TODO: обработка ошибок (не найдена такая дата)
+
       res.send(valutes);
     })
   })
 });
 
 router.get('/chart/get/dataset', function(req, res, next) {
-  // ?begin_date = "DD/MM/YYYY"
-  // ?end_date = "DD/MM/YYYY"
-  // ?char_code = "CODE"
-  // TODO: реализовать обработку ошибок (неправильный формат даты, не указаны параметры)
+  // begin_date - "DD/MM/YYYY" (строка, заданного формата)
+  // ?end_date = "DD/MM/YYYY" (строка, заданного формата)
+  // ?char_code = "CODE" (строка)
+
+
   this.beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
   this.endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
   this.charCode = req.query.char_code;
-
-
-  // TODO: обработка ошибок работы с базой данных
-
-  (new Promise(function(resolve, reject) {
-    let keySet = [];
-    db.createKeyStream()
-      .on('data', function(date) {
-        keySet.push(date);
-      })
-      .on('end', function() {
-        let dateArray = [];
-        keySet.forEach((dateKey) => {
-          dateArray.push(moment(dateKey, "DD/MM/YYYY").toDate());
-        });
-        // выбираем даты из заданного пользователем периода времени
-        let rangedDateArray = [];
-        dateArray.forEach(function(date) {
-          let range = moment().range(beginDate, endDate);
-          if (range.contains(date)) {
-            rangedDateArray.push(date);
-          }
-        });
-        resolve(rangedDateArray);
-      })
-      .on('error', function(err) {
-        reject(err);
-      });
-  })).then(function(rangedDateArray) {
-    // сформируем наборы данных для построения графика
-    let dataSet = {
-      // форматируем массив дат
-      dates: rangedDateArray.map(function(date) {
-        return moment(date).format("DD/MM/YYYY");
-      }),
-      values: []
-    };
-    let promises = [];
-    rangedDateArray.forEach(function(date) {
-      let promise = new Promise(function(resolve, reject) {
-        db.get(moment(date).format("DD/MM/YYYY"), function(err, dataJSON) {
-          if (!err) {
-            resolve(dataJSON);
-          } else {
-            reject(err);
-          }
-        })
-      });
-      promises.push(promise);
-      promise.then(function(dataJSON) {
-        let data = JSON.parse(dataJSON);
-        data.data.forEach(function(value) {
-          // определяем значение курса для текущей валюты
-          if (value[1] === charCode) {
-            dataSet.values.push(Number(Number.parseFloat(value[4])/Number.parseInt(value[2])).toFixed(4));
-          }
-        });
-      }.bind(this));
-    }.bind(this));
-    Promise.all(promises).then(function() {
-      res.send(JSON.stringify(dataSet));
-    }.bind(this));
-  }.bind(this));
-
-
-  // TODO: сделать проверку, что диапазон указан правильно
+  chartGetDataset(beginDate, endDate, charCode, db, moment)
+    .then(function(dataSetJSON) {
+      res.send(dataSetJSON);
+    })
 });
 
 router.get('/fc/list', function(req, res, next) {
@@ -134,6 +73,19 @@ router.delete('/db', function(req, res, next) {
       res.sendStatus('505');
     }
   });
+});
+
+router.get('/report', function(req, res, next) {
+  // begin_date - "DD/MM/YYYY" (строка, заданного формата)
+  // ?end_date = "DD/MM/YYYY" (строка, заданного формата)
+  // ?char_code = "CODE" (строка)
+  this.beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
+  this.endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
+  this.charCode = req.query.char_code;
+  chartGetDataset(beginDate, endDate, charCode, db, moment)
+    .then(function(dataSetJSON) {
+      res.send(makeReport(JSON.parse(dataSetJSON), charCode));
+    })
 });
 
 
