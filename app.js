@@ -1,20 +1,37 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var Agenda = require('agenda');
-var Agendash = require('agendash');
-var Moment = require('moment');
-var MomentRange = require('moment-range');
+const serverConfigs = require('./server.config');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const Agenda = require('agenda');
+const Agendash = require('agendash');
+const Moment = require('moment');
+const MomentRange = require('moment-range');
 const moment = MomentRange.extendMoment(Moment);
-var level = require('level');
-var xml2js = require('xml2js');
-var iconv = require('iconv-lite');
-var request= require('request');
+//const level = require('level');
+const xml2js = require('xml2js');
+const iconv = require('iconv-lite');
+const request= require('request');
+const mongoose = require('mongoose');
+
+const mongoConnectionString =
+  `mongodb://${serverConfigs.mongodb.hostname}:${serverConfigs.mongodb.port}/${serverConfigs.mongodb.dbname}`;
+
+mongoose.connect(
+  mongoConnectionString,
+  {useNewUrlParser: true});
+
+const agenda = new Agenda({
+  db: {
+    address: mongoConnectionString,
+    collection: serverConfigs.agenda.collectionName
+  }
+});
 
 // инициализируем хранилище
-const db = level('db');
+// const db = level('db');
+const models = require('./db/models/index')(mongoose);
 
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
 let {
@@ -24,16 +41,12 @@ let {
 let {
   getQuotesByDate,
   getFcMarketLib
-} = require('./lib/cbr')(moment, xml2js, db, httpGet);
+} = require('./lib/cbr')(moment, xml2js, models, httpGet);
 
-const mongoConnectionString = 'mongodb://localhost:27017/agenda';
+let indexRouter = require('./routes/index')(models);
+let usersRouter = require('./routes/users');
 
-const agenda = new Agenda({db: {address: mongoConnectionString}});
-
-var indexRouter = require('./routes/index')(db);
-var usersRouter = require('./routes/users');
-
-var app = express();
+let app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -45,7 +58,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/dash', Agendash(agenda));
+app.use(serverConfigs.agenda.agendashUrl, Agendash(agenda));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 

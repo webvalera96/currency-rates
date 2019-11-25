@@ -46,17 +46,18 @@ class QuotesDataTables extends Component {
     httpClient.fetchQuotesDataForDate(date)
       .then(function(quotesData) {
         $(this.quotesTable.current).DataTable(createTableData(quotesData));
+          if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
+            httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
+              .then(function(dataSet) {
+                this.props.updateChart(createChartData(dataSet, this.props.chartCurrency));
+              }.bind(this));
+          }
       }.bind(this)).catch(function(err) {
         let table = $(this.quotesTable.current).DataTable();
         table.clear().draw();
       }.bind(this));
 
-    if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
-      httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
-        .then(function(dataSet) {
-          this.props.updateChart(createChartData(dataSet, this.props.chartCurrency));
-        }.bind(this));
-    }
+
 
 
   }

@@ -1,13 +1,12 @@
-module.exports = function(db) {
-  var express = require('express');
-  var router = express.Router();
-  var Moment = require('moment');
-  var MomentRange = require('moment-range');
+module.exports = function(models) {
+  const express = require('express');
+  const router = express.Router();
+  const Moment = require('moment');
+  const MomentRange = require('moment-range');
   const moment = MomentRange.extendMoment(Moment);
-  var level = require('level');
-  var xml2js = require('xml2js');
-  var iconv = require('iconv-lite');
-  var request= require('request');
+  const xml2js = require('xml2js');
+  const iconv = require('iconv-lite');
+  const request= require('request');
 
 
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
@@ -18,7 +17,7 @@ module.exports = function(db) {
   let {
     getQuotesByDate,
     getFcMarketLib
-  } = require('../lib/cbr')(moment, xml2js, db, httpGet);
+  } = require('../lib/cbr')(moment, xml2js, models, httpGet);
 
 
 
@@ -49,10 +48,10 @@ module.exports = function(db) {
     // ?char_code = "CODE" (строка)
 
 
-    this.beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
-    this.endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
-    this.charCode = req.query.char_code;
-    chartGetDataset(beginDate, endDate, charCode, db, moment)
+    let beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
+    let endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
+    let charCode = req.query.char_code;
+    chartGetDataset(beginDate, endDate, charCode, models, moment)
       .then(function(dataSetJSON) {
         res.send(dataSetJSON);
       })
@@ -79,10 +78,10 @@ module.exports = function(db) {
     // begin_date - "DD/MM/YYYY" (строка, заданного формата)
     // ?end_date = "DD/MM/YYYY" (строка, заданного формата)
     // ?char_code = "CODE" (строка)
-    this.beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
-    this.endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
-    this.charCode = req.query.char_code;
-    chartGetDataset(beginDate, endDate, charCode, db, moment)
+    let beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
+    let endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
+    let charCode = req.query.char_code;
+    chartGetDataset(beginDate, endDate, charCode, models, moment)
       .then(function(dataSetJSON) {
         res.send(makeReport(JSON.parse(dataSetJSON), charCode));
       })

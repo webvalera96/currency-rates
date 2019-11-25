@@ -75,21 +75,6 @@ class App extends Component {
         document.location.reload();
       })
   }
-
-  // datesChange(dateRange) {
-  //   const { startDate, endDate } = dateRange;
-  //   this.setState({ startDate, endDate });
-  //   this.updateChart(startDate, endDate, this.state.currency);
-  // }
-  //
-  // currencySelectChange(event) {
-  //   this.setState({
-  //     currency: event.target.value
-  //   });
-  //   this.updateChart(this.state.startDate, this.state.endDate, event.target.value);
-  // }
-
-
   render() {
     return (
       <Container fluid={true}>
