@@ -26,9 +26,7 @@ let {
   getFcMarketLib
 } = require('./lib/cbr')(moment, xml2js, db, httpGet);
 
-
-
-const mongoConnectionString = 'mongodb://172.104.228.238:27017/agenda';
+const mongoConnectionString = 'mongodb://localhost:27017/agenda';
 
 const agenda = new Agenda({db: {address: mongoConnectionString}});
 
