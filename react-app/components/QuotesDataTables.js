@@ -7,7 +7,6 @@ import {
   Table, Container
 } from 'react-bootstrap';
 import {SingleDatePicker, isInclusivelyBeforeDay} from 'react-dates';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import HTTPClient, {createChartData, createTableData} from "../lib/HTTPClient";
 
@@ -17,6 +16,7 @@ class QuotesDataTables extends Component {
 
   constructor(props) {
     super(props);
+
     this.state = {
       date: moment(new Date()),
       focused: false
@@ -50,6 +50,14 @@ class QuotesDataTables extends Component {
         let table = $(this.quotesTable.current).DataTable();
         table.clear().draw();
       }.bind(this));
+
+    if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
+      httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
+        .then(function(dataSet) {
+          this.props.updateChart(createChartData(dataSet, this.props.chartCurrency));
+        }.bind(this));
+    }
+
 
   }
 
@@ -107,7 +115,10 @@ class QuotesDataTables extends Component {
 }
 
 QuotesDataTables.propTypes = {
-  updateChart: PropTypes.func.isRequired
+  updateChart: PropTypes.func.isRequired,
+  chartStartDate: PropTypes.object.isRequired,
+  chartEndDate: PropTypes.object.isRequired,
+  chartCurrency: PropTypes.string
 };
 
 export default QuotesDataTables;
