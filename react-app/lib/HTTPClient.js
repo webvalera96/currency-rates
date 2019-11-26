@@ -106,7 +106,7 @@ class HTTPClient {
 
       return axios.get(`/quotes?${query}`)
         .then(function(response) {
-          let quotesData = response.data.data;
+          let quotesData = response.data;
           return quotesData;
         }).catch(function(error) {
           return error;

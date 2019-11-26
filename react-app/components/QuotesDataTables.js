@@ -19,6 +19,7 @@ class QuotesDataTables extends Component {
 
     this.state = {
       date: moment(new Date()),
+      realDate: null,
       focused: false
     };
 
@@ -44,7 +45,10 @@ class QuotesDataTables extends Component {
   updateDataTable(date) {
 
     httpClient.fetchQuotesDataForDate(date)
-      .then(function(quotesData) {
+      .then(function(jsonResponse) {
+        let {realDate, arr} = JSON.parse(jsonResponse);
+        let quotesData = JSON.stringify(arr);
+        this.setState({realDate});
         $(this.quotesTable.current).DataTable(createTableData(quotesData));
           if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
             httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
@@ -91,6 +95,9 @@ class QuotesDataTables extends Component {
                     readOnly={true}
                   />
                 </Form.Group>
+              </Form.Row>
+              <Form.Row>
+                {this.state.realDate}
               </Form.Row>
             </Form>
           </Col>

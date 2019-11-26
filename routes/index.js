@@ -12,7 +12,7 @@ module.exports = function(models) {
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
   let {
     httpGet, chartGetDataset, makeReport
-  } = require('../lib/mylib')(request, iconv);
+  } = require('../lib/mylib')(request, iconv, models, moment);
 
   let {
     getQuotesByDate,
@@ -32,11 +32,47 @@ module.exports = function(models) {
     let stringDate = req.query.date_req;
     let objectDate = moment(req.query.date_req, "DD/MM/YYYY").toDate();
 
-    getQuotesByDate(objectDate).then(() => {
-      db.get(stringDate, function(err, valutes) {
+    getQuotesByDate(objectDate).then((currencyQuotes) => {
 
-        res.send(valutes);
-      })
+      models.CurrencyQuotes.find(
+      {
+        'rates': {
+          $elemMatch: {
+            'date': objectDate
+          }
+        }
+      },
+      {
+        'currency': 1,
+        'rates': {
+          $elemMatch: {
+            'date': objectDate
+          }
+        }
+      }
+      , function(err, currencyQuotes) {
+        if (!err) {
+          let arr = [];
+          currencyQuotes.forEach(function(currencyQuote) {
+            const {nominal, value} = currencyQuote.rates[0];
+            arr.push([
+              currencyQuote.currency.numCode,
+              currencyQuote.currency.charCode,
+              nominal,
+              currencyQuote.currency.name,
+              value
+            ])
+          });
+
+          res.send(JSON.stringify({
+            realDate,
+            arr
+          }));
+        } else {
+          res.sendStatus(500);
+        }
+
+      }.bind(this));
     })
 
 
@@ -51,7 +87,7 @@ module.exports = function(models) {
     let beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
     let endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
     let charCode = req.query.char_code;
-    chartGetDataset(beginDate, endDate, charCode, models, moment)
+    chartGetDataset(beginDate, endDate, charCode)
       .then(function(dataSetJSON) {
         res.send(dataSetJSON);
       })
@@ -81,7 +117,7 @@ module.exports = function(models) {
     let beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
     let endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
     let charCode = req.query.char_code;
-    chartGetDataset(beginDate, endDate, charCode, models, moment)
+    chartGetDataset(beginDate, endDate, charCode)
       .then(function(dataSetJSON) {
         res.send(makeReport(JSON.parse(dataSetJSON), charCode));
       })
