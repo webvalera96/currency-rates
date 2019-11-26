@@ -104,14 +104,15 @@ class HTTPClient {
       let formatedDate = date.format("DD/MM/YYYY");
       let query = `date_req=${formatedDate}`;
 
-      return axios.get(`/quotes?${query}`)
-        .then(function(response) {
-          let quotesData = response.data.data;
-          return quotesData;
-        }).catch(function(error) {
-          return error;
-        })
-
+      return new Promise(function(resolve, reject) {
+        axios.get(`/quotes?${query}`)
+          .then(function(response) {
+            let quotesData = response.data;
+            resolve(quotesData);
+          }.bind(this)).catch(function(error) {
+          reject(error);
+        });
+      });
     }
   }
 }

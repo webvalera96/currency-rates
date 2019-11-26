@@ -19,6 +19,7 @@ class QuotesDataTables extends Component {
 
     this.state = {
       date: moment(new Date()),
+      realDate: null,
       focused: false
     };
 
@@ -44,8 +45,12 @@ class QuotesDataTables extends Component {
   updateDataTable(date) {
 
     httpClient.fetchQuotesDataForDate(date)
-      .then(function(quotesData) {
-        $(this.quotesTable.current).DataTable(createTableData(quotesData));
+      .then(function(response) {
+
+        let {realDate, arr} = response;
+
+        this.setState({realDate: moment(realDate).format("DD.MM.YYYY")});
+        $(this.quotesTable.current).DataTable(createTableData(arr));
           if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
             httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
               .then(function(dataSet) {
@@ -91,6 +96,15 @@ class QuotesDataTables extends Component {
                     readOnly={true}
                   />
                 </Form.Group>
+              </Form.Row>
+              <Form.Row>
+                <p>
+                  <strong>
+                    Центральный банк Российской Федерации установил с{` ${this.state.realDate} `}
+                    следующие курсы иностранных валют к рублю Российской Федерации без обязательств
+                    Банка России покупать или продавать указанные валюты по данному курсу
+                  </strong>
+                </p>
               </Form.Row>
             </Form>
           </Col>

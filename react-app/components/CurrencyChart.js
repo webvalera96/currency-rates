@@ -35,7 +35,7 @@ class CurrencyChart extends Component {
   componentDidMount() {
     axios.get('/fc/list')
       .then(function (response) {
-        const fclist = response.data.data;
+        const fclist = response.data;
 
         let firstCurrencyElement = fclist[0][1];
 
