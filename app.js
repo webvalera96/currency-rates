@@ -9,11 +9,30 @@ const Agendash = require('agendash');
 const Moment = require('moment');
 const MomentRange = require('moment-range');
 const moment = MomentRange.extendMoment(Moment);
-//const level = require('level');
 const xml2js = require('xml2js');
 const iconv = require('iconv-lite');
-const request= require('request');
+const request= require('request-promise');
 const mongoose = require('mongoose');
+const events = require('events');
+
+const winston = require('winston');
+const wlogger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({filename: './log/error.log', level: 'error'}),
+    new winston.transports.File({filename:'./log/combined.log'})
+  ]
+});
+
+const Repeater = require('./lib/Repeater')(events, request, wlogger);
+const repeater = new Repeater(serverConfigs.server.interval)
+
+if (process.env.NODE_ENV !== 'production') {
+  wlogger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
 
 const mongoConnectionString =
   `mongodb://${serverConfigs.mongodb.hostname}:${serverConfigs.mongodb.port}/${serverConfigs.mongodb.dbname}`;
@@ -36,14 +55,14 @@ const models = require('./db/models/index')(mongoose);
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
 let {
   httpGet, chartGetDataset, makeReport
-} = require('./lib/mylib')(request, iconv);
+} = require('./lib/mylib')(request, iconv, models, moment, repeater);
 
 let {
   getQuotesByDate,
   getFcMarketLib
 } = require('./lib/cbr')(moment, xml2js, models, httpGet);
 
-let indexRouter = require('./routes/index')(models);
+let indexRouter = require('./routes/index')(models, wlogger, repeater);
 let usersRouter = require('./routes/users');
 
 let app = express();

@@ -1,4 +1,4 @@
-module.exports = function(models) {
+module.exports = function(models, wlogger, repeater) {
   const express = require('express');
   const router = express.Router();
   const Moment = require('moment');
@@ -12,7 +12,7 @@ module.exports = function(models) {
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
   let {
     httpGet, chartGetDataset, makeReport
-  } = require('../lib/mylib')(request, iconv, models, moment);
+  } = require('../lib/mylib')(request, iconv, models, moment, repeater);
 
   let {
     getQuotesByDate,
@@ -52,6 +52,10 @@ module.exports = function(models) {
           arr
         }));
       }.bind(this)).catch(function(err) {
+        wlogger.log({
+          level: 'error',
+          message: err.stack
+        });
         res.sendStatus(500);
       }.bind(this))
 
@@ -77,17 +81,16 @@ module.exports = function(models) {
     getFcMarketLib()
       .then((fcList)=> {
         res.send(fcList)
+      }).catch(function (err) {
+        wlogger.log({
+          level: 'error',
+          message: err.stack
+        })
       })
   });
 
   router.delete('/db', function(req, res, next) {
-    db.clear(function(err) {
-      if (!err) {
-        res.sendStatus('200');
-      } else {
-        res.sendStatus('505');
-      }
-    });
+    res.sendStatus(200);
   });
 
   router.get('/report', function(req, res, next) {
@@ -100,6 +103,11 @@ module.exports = function(models) {
     chartGetDataset(beginDate, endDate, charCode)
       .then(function(dataSetJSON) {
         res.send(makeReport(JSON.parse(dataSetJSON), charCode));
+      }).catch(function(err) {
+        wlogger.log({
+          level: err,
+          message: err.stack
+        })
       })
   });
 

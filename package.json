@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www",
+    "start": "pm2 start ecosystem.config.js --env production",
+    "prestart": "webpack --mode production",
     "build": "webpack --mode production",
+    "debug": "SET NODE_ENV=production && node bin/www",
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "moment-range": "^4.0.2",
     "mongoose": "^5.7.12",
     "morgan": "~1.9.1",
+    "pm2": "^4.2.0",
     "prop-types": "^15.7.2",
     "react": "^16.12.0",
     "react-bootstrap": "^1.0.0-beta.16",
@@ -38,6 +41,8 @@
     "redux": "^4.0.4",
     "regenerator-runtime": "^0.13.3",
     "request": "^2.88.0",
+    "request-promise": "^4.2.5",
+    "winston": "^3.2.1",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {

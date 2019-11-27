@@ -90,7 +90,7 @@ class App extends Component {
                   <small><em>Репозиторий</em>: <a href="https://github.com/webvalera96/currency-rates">https://github.com/webvalera96/currency-rates</a></small>
                 </div>
                 <div>
-                  <small><em>Agendash</em>: <a href="/dash">Управление автоматической выгрузкой</a></small>
+                  <small><em>Управление расписанием выгрузки</em>: <a href="/dash">/dash</a></small>
                 </div>
 
             </div>

@@ -27,7 +27,7 @@ app.set('port', port);
   await agenda.now('get quotes for today');
 
   // загрузить данные по курсу валют на один месяц
- // await agenda.now('get quotes for month');
+  await agenda.now('get quotes for month');
 
   // и делать это каждый день
   //await agenda.every('day', 'get quotes for today');
