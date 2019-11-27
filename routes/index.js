@@ -32,48 +32,28 @@ module.exports = function(models) {
     let stringDate = req.query.date_req;
     let objectDate = moment(req.query.date_req, "DD/MM/YYYY").toDate();
 
-    getQuotesByDate(objectDate).then((currencyQuotes) => {
+    getQuotesByDate(objectDate)
+      .then(function(currenciesQuotes) {
+        let realDate = currenciesQuotes[0].rates[0].date;
+        let arr = [];
+        currenciesQuotes.forEach(function(currencyQuote) {
+          const {nominal, value} = currencyQuote.rates[0];
+          arr.push([
+            currencyQuote.currency.numCode,
+            currencyQuote.currency.charCode,
+            nominal,
+            currencyQuote.currency.name,
+            value
+          ])
+        });
 
-      models.CurrencyQuotes.find(
-      {
-        'rates': {
-          $elemMatch: {
-            'date': objectDate
-          }
-        }
-      },
-      {
-        'currency': 1,
-        'rates': {
-          $elemMatch: {
-            'date': objectDate
-          }
-        }
-      }
-      , function(err, currencyQuotes) {
-        if (!err) {
-          let arr = [];
-          currencyQuotes.forEach(function(currencyQuote) {
-            const {nominal, value} = currencyQuote.rates[0];
-            arr.push([
-              currencyQuote.currency.numCode,
-              currencyQuote.currency.charCode,
-              nominal,
-              currencyQuote.currency.name,
-              value
-            ])
-          });
-
-          res.send(JSON.stringify({
-            realDate,
-            arr
-          }));
-        } else {
-          res.sendStatus(500);
-        }
-
-      }.bind(this));
-    })
+        res.send(JSON.stringify({
+          realDate,
+          arr
+        }));
+      }.bind(this)).catch(function(err) {
+        res.sendStatus(500);
+      }.bind(this))
 
 
   });
