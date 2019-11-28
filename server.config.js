@@ -1,6 +1,6 @@
 module.exports = {
   server: {
-    interval: 1
+    interval: 1000
   },
   mongodb: {
     hostname: 'localhost',

@@ -9,6 +9,8 @@ import {
   Form, Row, Col,
 } from 'react-bootstrap';
 
+import Loader from "./Loader";
+
 const httpClient = new HTTPClient();
 
 class CurrencyChart extends Component {
@@ -18,7 +20,7 @@ class CurrencyChart extends Component {
     this.state = {
       fclist: null,
       focusedInput: null,
-
+      loading: false,
 
       currency: null,
       startDate: moment(new Date()).subtract(30, 'days'),
@@ -52,17 +54,30 @@ class CurrencyChart extends Component {
   }
 
   updateChart(startDate, endDate, currency) {
+    this.setState({
+      loading: true
+    });
     httpClient.fetchChartDataSet(startDate, endDate, currency)
       .then(function(dataSet) {
         this.props.updateChart(createChartData(dataSet, currency));
-      }.bind(this));
+        this.setState({
+          loading: false
+        })
+      }.bind(this)).catch(function(err) {
+        this.setState({
+          loading: false
+        });
+        alert('Загрузка данных потребует больше времени. Вернитесь к странице позже.');
+      });
   }
 
   datesChange(dateRange) {
     const { startDate, endDate } = dateRange;
     this.props.updateChartStartDate(startDate);
     this.props.updateChartEndDate(endDate);
-    this.updateChart(startDate, endDate, this.props.chartCurrency);
+
+    if (startDate && endDate && this.props.chartCurrency)
+      this.updateChart(startDate, endDate, this.props.chartCurrency);
   }
 
   currencySelectChange(event) {
@@ -101,14 +116,20 @@ class CurrencyChart extends Component {
                 small={true}
                 startDatePlaceholderText="Нач. дата"
                 endDatePlaceholderText="Кон. дата"
+
                 isOutsideRange={day => !isInclusivelyBeforeDay(day, moment())}
               />
             </Form.Row>
           </Form.Group>
         </Form.Row>
         <Row>
+          <Col>
           {
-            this.props.chartData &&
+            this.state.loading &&
+              <Loader />
+          }
+          {
+            this.props.chartData && !this.state.loading &&
             <Line
               data={this.props.chartData}
               options={
@@ -123,6 +144,7 @@ class CurrencyChart extends Component {
                 }
               }/>
           }
+          </Col>
         </Row>
       </React.Fragment>
     )

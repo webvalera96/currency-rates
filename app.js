@@ -6,9 +6,14 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const Agenda = require('agenda');
 const Agendash = require('agendash');
-const Moment = require('moment');
+const Moment = require('moment-business-days');
 const MomentRange = require('moment-range');
 const moment = MomentRange.extendMoment(Moment);
+
+moment.locale('ru');
+moment.updateLocale('ru', {
+  workingWeekdays: [ 2, 3, 4, 5], // 0 - Воскресенье, 6 - Понедельник !!!
+});
 const xml2js = require('xml2js');
 const iconv = require('iconv-lite');
 const request= require('request-promise');
@@ -55,7 +60,7 @@ const models = require('./db/models/index')(mongoose);
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
 let {
   httpGet, chartGetDataset, makeReport
-} = require('./lib/mylib')(request, iconv, models, moment, repeater);
+} = require('./lib/mylib')(request, iconv, models, moment, repeater, xml2js);
 
 let {
   getQuotesByDate,

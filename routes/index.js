@@ -12,7 +12,7 @@ module.exports = function(models, wlogger, repeater) {
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
   let {
     httpGet, chartGetDataset, makeReport
-  } = require('../lib/mylib')(request, iconv, models, moment, repeater);
+  } = require('../lib/mylib')(request, iconv, models, moment, repeater, xml2js);
 
   let {
     getQuotesByDate,
@@ -34,10 +34,10 @@ module.exports = function(models, wlogger, repeater) {
 
     getQuotesByDate(objectDate)
       .then(function(currenciesQuotes) {
-        let realDate = currenciesQuotes[0].rates[0].date;
+        let realDate = currenciesQuotes[0].rates.date;
         let arr = [];
         currenciesQuotes.forEach(function(currencyQuote) {
-          const {nominal, value} = currencyQuote.rates[0];
+          const {nominal, value} = currencyQuote.rates;
           arr.push([
             currencyQuote.currency.numCode,
             currencyQuote.currency.charCode,

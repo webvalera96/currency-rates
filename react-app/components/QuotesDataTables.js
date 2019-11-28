@@ -89,11 +89,11 @@ class QuotesDataTables extends Component {
                     onDateChange={this.dateChange}
                     focused={this.state.focused}
                     onFocusChange={({ focused }) => this.setState({ focused })}
-                    isOutsideRange={day => !isInclusivelyBeforeDay(day, moment())}
+                    isOutsideRange={day => !isInclusivelyBeforeDay(day, moment().add(1, 'day'))}
                     block={true}
                     small={true}
                     placeholder={"Дата"}
-                    readOnly={true}
+                    readOnly={false}
                   />
                 </Form.Group>
               </Form.Row>
