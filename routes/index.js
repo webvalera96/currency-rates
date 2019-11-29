@@ -1,4 +1,4 @@
-module.exports = function(models, wlogger, repeater) {
+module.exports = function(models, wlogger, repeater, httpClient, agenda) {
   const express = require('express');
   const router = express.Router();
   const Moment = require('moment');
@@ -11,15 +11,8 @@ module.exports = function(models, wlogger, repeater) {
 
 // библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
   let {
-    httpGet, chartGetDataset, makeReport
-  } = require('../lib/mylib')(request, iconv, models, moment, repeater, xml2js);
-
-  let {
-    getQuotesByDate,
-    getFcMarketLib
-  } = require('../lib/cbr')(moment, xml2js, models, httpGet);
-
-
+    chartGetDataset, makeReport
+  } = require('../lib/mylib')(request, iconv, models, moment, repeater, xml2js, agenda, httpClient);
 
   /* GET home page. */
   router.get('/', function(req, res, next) {
@@ -32,34 +25,28 @@ module.exports = function(models, wlogger, repeater) {
     let stringDate = req.query.date_req;
     let objectDate = moment(req.query.date_req, "DD/MM/YYYY").toDate();
 
-    getQuotesByDate(objectDate)
+    models.CurrencyQuotes.getQuotesByDate(objectDate, {moment, httpClient, xml2js})
       .then(function(currenciesQuotes) {
-        let realDate = currenciesQuotes[0].rates.date;
-        let arr = [];
-        currenciesQuotes.forEach(function(currencyQuote) {
-          const {nominal, value} = currencyQuote.rates;
-          arr.push([
-            currencyQuote.currency.numCode,
-            currencyQuote.currency.charCode,
-            nominal,
-            currencyQuote.currency.name,
-            value
-          ])
-        });
-
         res.send(JSON.stringify({
-          realDate,
-          arr
-        }));
-      }.bind(this)).catch(function(err) {
+          realDate: currenciesQuotes[0].rates.date,
+          arr: currenciesQuotes.map((currencyQuote) => {
+            const {nominal, value} = currencyQuote.rates;
+            return [
+              currencyQuote.currency.numCode,
+              currencyQuote.currency.charCode,
+              nominal,
+              currencyQuote.currency.name,
+              value
+            ]
+          })
+        }))
+      }).catch(function(err){
         wlogger.log({
           level: 'error',
           message: err.stack
         });
         res.sendStatus(500);
-      }.bind(this))
-
-
+      });
   });
 
   router.get('/chart/get/dataset', function(req, res, next) {
@@ -67,25 +54,30 @@ module.exports = function(models, wlogger, repeater) {
     // ?end_date = "DD/MM/YYYY" (строка, заданного формата)
     // ?char_code = "CODE" (строка)
 
-
     let beginDate = moment(req.query.begin_date, "DD/MM/YYYY").toDate();
     let endDate = moment(req.query.end_date, "DD/MM/YYYY").toDate();
     let charCode = req.query.char_code;
-    chartGetDataset(beginDate, endDate, charCode)
+
+    models.CurrencyQuotes.getChartDataset(beginDate, endDate, charCode, {agenda, moment})
       .then(function(dataSetJSON) {
         res.send(dataSetJSON);
-      })
+      });
+    // chartGetDataset(beginDate, endDate, charCode)
+    //   .then(function(dataSetJSON) {
+    //     res.send(dataSetJSON);
+    //   })
   });
 
   router.get('/fc/list', function(req, res, next) {
-    getFcMarketLib()
+    models.CurrencyQuotes.getFcMarketLib()
       .then((fcList)=> {
         res.send(fcList)
       }).catch(function (err) {
         wlogger.log({
           level: 'error',
           message: err.stack
-        })
+        });
+        res.sendStatus(500);
       })
   });
 

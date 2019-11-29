@@ -31,7 +31,7 @@ const wlogger = winston.createLogger({
 });
 
 const Repeater = require('./lib/Repeater')(events, request, wlogger);
-const repeater = new Repeater(serverConfigs.server.interval)
+const repeater = new Repeater(serverConfigs.server.interval);
 
 if (process.env.NODE_ENV !== 'production') {
   wlogger.add(new winston.transports.Console({
@@ -53,26 +53,49 @@ const agenda = new Agenda({
   }
 });
 
-// инициализируем хранилище
-// const db = level('db');
+
+const HTTPClient = require('./lib/HTTPClient')({events, request,wlogger, iconv});
+const httpClient = new HTTPClient(serverConfigs.server.interval);
+
 const models = require('./db/models/index')(mongoose);
 
-// библиотека для взаимодействия с API сайта ЦБР по протоколу HTTP
-let {
-  httpGet, chartGetDataset, makeReport
-} = require('./lib/mylib')(request, iconv, models, moment, repeater, xml2js);
+// задача получения котировок
+agenda.define('get quotes', async function (job, done) {
+  let {startDate, endDate} = job.attrs.data;
+  if (startDate instanceof Date && endDate instanceof Date) {
+    try {
+      for(let date = startDate; date <= endDate; date = moment(date).add(1, 'day').toDate()) {
+        await models.CurrencyQuotes.getQuotesByDate(date, {moment, httpClient, xml2js});
+      }
+      done();
+    } catch (err) {
+      if (err instanceof Error) {
+        done(err);
+      } else {
+        done(new Error(err));
+      }
+    }
+  } else {
+    done(new TypeError(`Expected {startDate, endDate} to be both Date but get {${typeof startDate},${typeof endDate}}`));
+  }
 
-let {
-  getQuotesByDate,
-  getFcMarketLib
-} = require('./lib/cbr')(moment, xml2js, models, httpGet);
+}.bind(this));
 
-let indexRouter = require('./routes/index')(models, wlogger, repeater);
+agenda.define('get quotes for today', async function (job) {
+  // загрузка данных котировок на сегодняшний день
+  let date = new Date();
+  await models.CurrencyQuotes.getQuotesByDate(date, {moment, httpClient, xml2js});
+}.bind(this));
+
+
+
+let indexRouter = require('./routes/index')(models, wlogger, repeater, httpClient, agenda);
 let usersRouter = require('./routes/users');
 
 let app = express();
 
 // view engine setup
+app.set('agenda', agenda);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
@@ -102,22 +125,8 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-agenda.define('get quotes for month', async function (job) {
-  let endDate = moment(new Date());
-  let startDate = moment(endDate).subtract(30, 'days');
-  for(let date = startDate; date.toDate() <= endDate.toDate(); date = date.add(1, 'day')) {
-    await getQuotesByDate(date);
-  }
 
-}.bind(this));
 
-agenda.define('get quotes for today', async function (job) {
-  // загрузка данных котировок на сегодняшний день
-  let date = new Date();
-  await getQuotesByDate(date);
-}.bind(this));
-
-app.set('agenda', agenda);
 
 
 module.exports = app;

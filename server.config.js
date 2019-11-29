@@ -1,3 +1,6 @@
+const moment = require('moment');
+let now = moment(new Date).startOf('day');
+
 module.exports = {
   server: {
     interval: 1000
@@ -9,6 +12,8 @@ module.exports = {
   },
   agenda: {
     collectionName: 'agenda',
-    agendashUrl: '/dash'
+    agendashUrl: '/dash',
+    endDate: moment(now).toDate(),
+    startDate: moment(now).subtract(30, 'days').toDate()
   }
 };

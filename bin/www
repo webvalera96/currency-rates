@@ -4,10 +4,11 @@
  * Module dependencies.
  */
 
-var app = require('../app');
+const app = require('../app');
 const agenda = app.get('agenda');
-var debug = require('debug')('currency-rates:server');
-var http = require('http');
+const debug = require('debug')('currency-rates:server');
+const http = require('http');
+const serverSettings = require('../server.config');
 
 /**
  * Get port from environment and store in Express.
@@ -26,8 +27,11 @@ app.set('port', port);
   // загрузить данные по курсу валют на текущий день при загрузке сервера
   await agenda.now('get quotes for today');
 
-  // загрузить данные по курсу валют на один месяц
-  //await agenda.now('get quotes for month');
+  // загрузить данные по курсу валют
+  // await agenda.now('get quotes', {
+  //   endDate: serverSettings.agenda.endDate,
+  //   startDate: serverSettings.agenda.startDate
+  // });
 
   // и делать это каждый день
   //await agenda.every('day', 'get quotes for today');
