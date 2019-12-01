@@ -62,7 +62,7 @@ module.exports = function({
 
     models.CurrencyQuotes.getQuotesReport(charCodes, startDate, endDate)
       .then(function(reportJSON) {
-        res.send(reportJSON)
+        res.send(JSON.stringify(reportJSON, undefined, 2));
       }).catch(function(err) {
       wlogger.log({
         level: 'error',
