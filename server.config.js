@@ -3,7 +3,8 @@ let now = moment(new Date).startOf('day');
 
 module.exports = {
   server: {
-    interval: 1000
+    interval: 1000,
+    noQueue: false
   },
   mongodb: {
     hostname: 'localhost',

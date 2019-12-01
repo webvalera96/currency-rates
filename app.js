@@ -9,7 +9,6 @@ const Agendash = require('agendash');
 const Moment = require('moment-business-days');
 const MomentRange = require('moment-range');
 const moment = MomentRange.extendMoment(Moment);
-
 moment.locale('ru');
 moment.updateLocale('ru', {
   workingWeekdays: [ 2, 3, 4, 5], // 0 - Воскресенье, 6 - Понедельник !!!
@@ -19,7 +18,6 @@ const iconv = require('iconv-lite');
 const request= require('request-promise');
 const mongoose = require('mongoose');
 const events = require('events');
-
 const winston = require('winston');
 const wlogger = winston.createLogger({
   level: 'info',
@@ -29,9 +27,6 @@ const wlogger = winston.createLogger({
     new winston.transports.File({filename:'./log/combined.log'})
   ]
 });
-
-const Repeater = require('./lib/Repeater')(events, request, wlogger);
-const repeater = new Repeater(serverConfigs.server.interval);
 
 if (process.env.NODE_ENV !== 'production') {
   wlogger.add(new winston.transports.Console({
@@ -53,9 +48,9 @@ const agenda = new Agenda({
   }
 });
 
-
-const HTTPClient = require('./lib/HTTPClient')({events, request,wlogger, iconv});
-const httpClient = new HTTPClient(serverConfigs.server.interval);
+const HTTPClient = require('./lib/HTTPClient')({events, request, wlogger, iconv});
+// noinspection JSValidateTypes
+const httpClient = new HTTPClient(serverConfigs.server.interval,serverConfigs.server.noQueue);
 
 const models = require('./db/models/index')(mongoose);
 
@@ -87,17 +82,28 @@ agenda.define('get quotes for today', async function (job) {
   await models.CurrencyQuotes.getQuotesByDate(date, {moment, httpClient, xml2js});
 }.bind(this));
 
+let indexRouter = require('./routes/index')({
+  express
+});
+let dbRouter = require('./routes/db')({
+  models,
+  wlogger,
+  httpClient,
+  agenda,
+  express,
+  moment,
+  xml2js
+});
 
-
-let indexRouter = require('./routes/index')(models, wlogger, repeater, httpClient, agenda);
-let usersRouter = require('./routes/users');
 
 let app = express();
 
-// view engine setup
-app.set('agenda', agenda);
+// настройка движка представлений
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+// делаем доступным в bin/www объект планировщика задач
+app.set('agenda', agenda);
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -107,7 +113,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(serverConfigs.agenda.agendashUrl, Agendash(agenda));
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/db', dbRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -124,9 +130,5 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
-
-
-
 
 module.exports = app;

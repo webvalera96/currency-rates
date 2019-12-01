@@ -8,12 +8,28 @@ import {DateRangePicker, isInclusivelyBeforeDay} from "react-dates";
 import {
   Form, Row, Col,
 } from 'react-bootstrap';
-
 import Loader from "./Loader";
-
+import Button from "react-bootstrap/Button";
 const httpClient = new HTTPClient();
 
+/**
+ * Класс React-компонента, для отображения графика и элементов управления
+ * @class CurrencyChart
+ * @category client
+ */
 class CurrencyChart extends Component {
+
+  /**
+   * Конструктор класса
+   * @param {object} props.chartData - Данные для построения графика
+   * @param {function} props.updateChart - Функция для обновления переменной-состояния данных для построения графика Redux
+   * @param {moment} props.chartStartDate - Дата начала построения графика
+   * @param {function} props.updateChartStartDate - Функция для обновления переменной-состояния даты начала построения графика Redux
+   * @param {moment} props.chartEndDate - Дата конца построения графика
+   * @param {function} props.updateChartEndDate - Функция для обновления переменной-состояния даты конца построения графика Redux
+   * @param {string} props.chartCurrency - Строка наименования курса валют
+   * @param {function} pros.updateChartCurrency - Функция для обновления переменной-состояния наименования курса валют Redux
+   */
   constructor(props) {
     super(props);
 
@@ -30,12 +46,16 @@ class CurrencyChart extends Component {
 
     this.updateChart = this.updateChart.bind(this);
     this.componentDidMount = this.componentDidMount.bind(this);
+    this.plotChart = this.plotChart.bind(this);
     this.datesChange = this.datesChange.bind(this);
     this.currencySelectChange = this.currencySelectChange.bind(this);
   }
 
+  /**
+   * Встроенный метод жизненного цикла React
+   */
   componentDidMount() {
-    axios.get('/fc/list')
+    axios.get('/db/fc/list')
       .then(function (response) {
         const fclist = response.data;
 
@@ -45,7 +65,7 @@ class CurrencyChart extends Component {
 
         this.setState({
           fclist: fclist.map(function(fc, index) {
-            return <option id={index} value={`${fc[1]}`}>{`${fc[0]} (${fc[1]})`}</option>
+            return <option id={index} key={index} value={`${fc[1]}`}>{`${fc[0]} (${fc[1]})`}</option>
           })
         });
 
@@ -53,6 +73,12 @@ class CurrencyChart extends Component {
       }.bind(this));
   }
 
+  /**
+   * Метод, для обновления графика
+   * @param {moment} startDate - Дата начала построения графика
+   * @param {moment} endDate - Дата конца построения графика
+   * @param {string} currency - Наименование валюты (код) для построения графика
+   */
   updateChart(startDate, endDate, currency) {
     this.setState({
       loading: true
@@ -71,19 +97,31 @@ class CurrencyChart extends Component {
       });
   }
 
+  /**
+   * Метод для отрисовки графика
+   * @param event
+   */
+  plotChart(event) {
+    event.preventDefault();
+    let startDate = this.props.chartStartDate;
+    let endDate = this.props.chartEndDate;
+    if (startDate && startDate.isValid() && endDate && endDate.isValid() && this.props.chartCurrency)
+      this.updateChart(startDate, endDate, this.props.chartCurrency);
+  }
+
+  /**
+   * Метод для обновления состояния переменных startDate, endDate компонента react-dates
+   * @param {{moment,moment}} dateRange - Период времени для построения графика
+   */
   datesChange(dateRange) {
     const { startDate, endDate } = dateRange;
     this.props.updateChartStartDate(startDate);
     this.props.updateChartEndDate(endDate);
-
-    if (startDate && endDate && this.props.chartCurrency)
-      this.updateChart(startDate, endDate, this.props.chartCurrency);
   }
 
   currencySelectChange(event) {
     let currency = event.target.value;
     this.props.updateChartCurrency(currency);
-    this.updateChart(this.props.chartStartDate, this.props.chartEndDate, currency);
   }
 
   render() {
@@ -117,10 +155,17 @@ class CurrencyChart extends Component {
                 startDatePlaceholderText="Нач. дата"
                 endDatePlaceholderText="Кон. дата"
 
-                isOutsideRange={day => !isInclusivelyBeforeDay(day, moment())}
+                isOutsideRange={day => !isInclusivelyBeforeDay(day, moment().add(1, 'day'))}
+                minDate={moment('01/01/2010', 'DD/MM/YYYY')}
               />
+              <Button style={{
+                marginLeft: "20px"
+              }} onClick={this.plotChart}>Построить график</Button>
             </Form.Row>
           </Form.Group>
+
+
+
         </Form.Row>
         <Row>
           <Col>

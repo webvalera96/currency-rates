@@ -7,7 +7,8 @@
     "prestart": "webpack --mode production",
     "build": "webpack --mode production",
     "debug": "SET NODE_ENV=production && node bin/www",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "jsdoc": "jsdoc -c jsdoc.config.js -d public/docs"
   },
   "dependencies": {
     "agenda": "^2.1.0",
@@ -52,6 +53,8 @@
     "@babel/preset-react": "^7.7.0",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-object-assign": "^6.22.0",
+    "jsdoc": "^3.6.3",
+    "better-docs": "^1.4.7",
     "css-loader": "^3.2.0",
     "iconv-lite": "^0.5.0",
     "react-dates": "^21.5.0",

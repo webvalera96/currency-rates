@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-
+/**
+ * Вспомогательный метод для формирования данных, для построения графика
+ * @category client
+ * @param {object} dataSet - Набор точек для построения графика
+ * @param {string} currency - Наименование валюты
+ * @returns {object}
+ */
 export function createChartData(dataSet, currency) {
   if (dataSet && dataSet.dates && dataSet.values && currency) {
     return {
@@ -32,6 +38,12 @@ export function createChartData(dataSet, currency) {
   }
 }
 
+/**
+ * Вспомогательный метод для формирования данных, для построения таблицы
+ * @category client
+ * @param {object} quotesData - Набор данных для таблицы
+ * @returns {object}
+ */
 export function createTableData(quotesData) {
   return {
     "destroy": true,
@@ -76,19 +88,33 @@ export function createTableData(quotesData) {
   }
 }
 
+/**
+ * Клиент для взаимодейтсивя с сервером бэкэнда
+ * @class HTTPClient
+ * @category client
+ */
 class HTTPClient {
-
+  /**
+   * Создать экземпляр клиента
+   */
   constructor() {
     this.dateFormat = "DD/MM/YYYY";
   }
 
+  /**
+   * Метод, запршаивающий данные с сервера бэкэнда для построения графика динамики изменения курса валюты
+   * @param {moment} startDate - Начальная дата
+   * @param {moment} endDate - Конечная дата
+   * @param {string} currency - Валюта
+   * @returns {Promise<AxiosResponse<T>>}
+   */
   fetchChartDataSet(startDate, endDate, currency) {
     if (startDate && endDate && currency) {
-      let formatedStartDate = startDate.format(this.dateFormat);
-      let formatedEndDate = endDate.format(this.dateFormat);
-      let query = `begin_date=${formatedStartDate}&end_date=${formatedEndDate}&char_code=${currency}`;
+      let formattedStartDate = startDate.format(this.dateFormat);
+      let formattedEndDate = endDate.format(this.dateFormat);
+      let query = `begin_date=${formattedStartDate}&end_date=${formattedEndDate}&char_code=${currency}`;
 
-      return axios.get(`/chart/get/dataset?${query}`)
+      return axios.get(`/db/chart/get/dataset?${query}`)
         .then(function(response) {
           let dataSet = response.data;
           return dataSet;
@@ -99,13 +125,18 @@ class HTTPClient {
     }
   }
 
+  /**
+   * Метод, запрашивающий данные с сервера бэкэнда, для отображения в таблице котировок валют на указанную дату
+   * @param {moment} date - Дата, на которую запрашиваются котировки для валюты
+   * @returns {Promise<unknown>}
+   */
   fetchQuotesDataForDate(date) {
     if (date) {
-      let formatedDate = date.format("DD/MM/YYYY");
-      let query = `date_req=${formatedDate}`;
+      let formattedDate = date.format("DD/MM/YYYY");
+      let query = `date_req=${formattedDate}`;
 
       return new Promise(function(resolve, reject) {
-        axios.get(`/quotes?${query}`)
+        axios.get(`/db/quotes?${query}`)
           .then(function(response) {
             let quotesData = response.data;
             resolve(quotesData);

@@ -2,11 +2,71 @@ module.exports = function(mongoose, {Currency, CurrencyRate}) {
   const currencyRateSchema = require('./CurrencyRate/CurrencyRateSchema')(mongoose);
   const currencySchema = require('./Currency/CurrencySchema')(mongoose);
 
+  /**
+   * Класс, представляющий собой котировки валюты на разные даты в базе данных MongoDB
+   * @class CurrencyQuotesSchema
+   * @name CurrencyQuotesSchema
+   * @type {Schema}
+   */
   let currencyQuotesSchema = new mongoose.Schema({
     currency: currencySchema,
     rates: [currencyRateSchema]
   });
 
+  /**
+   * Статичный метод для получения отчета по котировкам
+   * @category server
+   * @param {String}charCodes - массив кодов валют, для которых необходимо построить отчет в формате JSON
+   * @param {Date} startDate - начальная дата периода
+   * @param {Date|null} endDate - конечная дата периода (если конечная дата не указана, используется только нач. дата)
+   * @returns {Promise<[]>}
+   */
+  currencyQuotesSchema.statics.getQuotesReport = async function(charCodes, startDate, endDate = null) {
+    if (charCodes && startDate && charCodes instanceof Array && startDate instanceof Date) {
+      let currenciesQuotes = [];
+      for (let i = 0; i < charCodes.length; i++ ) {
+        let charCode = charCodes[i];
+
+        try {
+          let currencyQuotes = await this.aggregate()
+            .match({
+              'currency.charCode': charCode
+            })
+            .unwind('$rates')
+            .match({
+              'rates.date': endDate ? {
+                '$gte': new Date(startDate.toISOString()),
+                '$lte': new Date(endDate.toISOString())
+              } : new Date(startDate.toISOString())
+            })
+            .group({
+              _id: '$currency.charCode',
+              'rates': {'$push': '$rates'}
+            })
+            .exec();
+          currenciesQuotes.push(currencyQuotes);
+        } catch (e) {
+          if (e instanceof Error) {
+            throw e;
+          } else {
+            throw new Error(e);
+          }
+        }
+      }
+      return currenciesQuotes;
+    }
+  };
+
+  /**
+   * Статичный метод для получения данных для построения графика изменения котировок за указанный период
+   * @category server
+   * @param {Date} startDate - начальная дата
+   * @param {Date} endDate - конечная дата
+   * @param {String} charCode - символьный код валюты
+   * @param agenda - модуль agenda
+   * @param moment - модуль moment
+   * @returns {Promise<unknown>}
+   */
   currencyQuotesSchema.statics.getChartDataset = async function(startDate, endDate, charCode, {agenda, moment}) {
     let thisJob = await agenda.now('get quotes', {
       endDate: endDate,

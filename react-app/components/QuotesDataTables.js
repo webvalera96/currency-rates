@@ -7,13 +7,22 @@ import {
   Table, Container
 } from 'react-bootstrap';
 import {SingleDatePicker, isInclusivelyBeforeDay} from 'react-dates';
+// noinspection ES6CheckImport
 import PropTypes from 'prop-types';
-import HTTPClient, {createChartData, createTableData} from "../lib/HTTPClient";
-
+import HTTPClient, {createTableData} from "../lib/HTTPClient";
 const httpClient = new HTTPClient();
 
+/**
+ * Класс компонента React
+ * @class QuotesDataTables
+ * @category client
+ */
 class QuotesDataTables extends Component {
 
+  /**
+   * Конструктор
+   * @param props
+   */
   constructor(props) {
     super(props);
 
@@ -31,10 +40,16 @@ class QuotesDataTables extends Component {
     this.componentDidMount = this.componentDidMount.bind(this);
   }
 
+  /**
+   * Метод жизненного цикла компонента React
+   */
   componentDidMount() {
     this.updateDataTable(this.state.date);
   }
 
+  /**
+   * Метод жизненного цикла компонента React
+   */
   componentWillUnmount() {
     $(this.quotesTable.current)
       .find('table')
@@ -42,34 +57,31 @@ class QuotesDataTables extends Component {
       .destroy(true);
   }
 
+  /**
+   * Метод для получения котировок на текущую дату и обновления данных таблицы
+   * @param {moment} date - Текущая дата, на которую запрашиваются котировки валют
+   */
   updateDataTable(date) {
 
     httpClient.fetchQuotesDataForDate(date)
       .then(function(response) {
-
         let {realDate, arr} = response;
-
         this.setState({realDate: moment(realDate).format("DD.MM.YYYY")});
         $(this.quotesTable.current).DataTable(createTableData(arr));
-          if (this.props.chartStartDate && this.props.chartEndDate && this.props.chartCurrency) {
-            httpClient.fetchChartDataSet(this.props.chartStartDate, this.props.chartEndDate, this.props.chartCurrency)
-              .then(function(dataSet) {
-                this.props.updateChart(createChartData(dataSet, this.props.chartCurrency));
-              }.bind(this));
-          }
       }.bind(this)).catch(function(err) {
         let table = $(this.quotesTable.current).DataTable();
         table.clear().draw();
       }.bind(this));
-
-
-
-
   }
 
+  /**
+   * Метод, вызывающийся при изменении даты в компоненте react-dates и обновляющий состояние компонента
+   * @param {moment} date - Новое значение даты
+   */
   dateChange(date) {
     this.setState({date});
-    this.updateDataTable(date);
+    if (date && date.isValid())
+      this.updateDataTable(date);
   }
 
   render() {
@@ -89,11 +101,13 @@ class QuotesDataTables extends Component {
                     onDateChange={this.dateChange}
                     focused={this.state.focused}
                     onFocusChange={({ focused }) => this.setState({ focused })}
-                    isOutsideRange={day => !isInclusivelyBeforeDay(day, moment().add(1, 'day'))}
+                    isOutsideRange={day =>
+                      !isInclusivelyBeforeDay(day, moment().add(1, 'day'))}
                     block={true}
                     small={true}
                     placeholder={"Дата"}
                     readOnly={false}
+
                   />
                 </Form.Group>
               </Form.Row>
@@ -129,11 +143,5 @@ class QuotesDataTables extends Component {
   }
 }
 
-QuotesDataTables.propTypes = {
-  updateChart: PropTypes.func.isRequired,
-  chartStartDate: PropTypes.object.isRequired,
-  chartEndDate: PropTypes.object.isRequired,
-  chartCurrency: PropTypes.string
-};
 
 export default QuotesDataTables;

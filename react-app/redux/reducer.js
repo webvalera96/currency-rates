@@ -1,5 +1,14 @@
 import {Map} from 'immutable';
 
+/**
+ * Функция reducer для Redux
+ * @name Reducer
+ * @function
+ * @category client
+ * @param {Immutable.MAP<K,V>} state - хранилище
+ * @param {object} action - действие
+ * @returns {Map<V, K>|*|Map<V, K>}
+ */
 export default function (state = Map(), action) {
   switch (action.type) {
     case 'SET_STATE':
