@@ -8,6 +8,7 @@ const app = require('../app');
 const agenda = app.get('agenda');
 const debug = require('debug')('currency-rates:server');
 const http = require('http');
+const serverSettings = require('../server.config');
 
 /**
  * Получить номер порта из переменной окружения и сохранить в Express
@@ -26,14 +27,14 @@ app.set('port', port);
   // загрузить данные по курсу валют на текущий день при загрузке сервера
   await agenda.now('get quotes for today');
 
-  // загрузить данные по курсу валют
-  // await agenda.now('get quotes', {
-  //   endDate: serverSettings.agenda.endDate,
-  //   startDate: serverSettings.agenda.startDate
-  // });
+  // загрузить начальные данные по курсам валют при старте сервера
+  await agenda.now('get quotes', {
+    endDate: serverSettings.agenda.endDate,
+    startDate: serverSettings.agenda.startDate
+  });
 
   // и делать это каждый день
-  //await agenda.every('day', 'get quotes for today');
+  await agenda.every('day', 'get quotes for today');
 
 })();
 

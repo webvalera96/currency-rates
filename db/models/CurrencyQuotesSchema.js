@@ -1,6 +1,7 @@
-module.exports = function(mongoose, {Currency, CurrencyRate}) {
+module.exports = function(mongoose, {Currency, CurrencyRate, DateMap}) {
   const currencyRateSchema = require('./CurrencyRate/CurrencyRateSchema')(mongoose);
   const currencySchema = require('./Currency/CurrencySchema')(mongoose);
+
 
   /**
    * Класс, представляющий собой котировки валюты на разные даты в базе данных MongoDB
@@ -123,12 +124,6 @@ module.exports = function(mongoose, {Currency, CurrencyRate}) {
                 dates: [],
                 values: []
               };
-
-              // TODO: формирования набора данных, в зависимости от полученных данных
-              // если между начальной и конечной датой больше трех месяцев, то на графике
-              // отображать среднее значение котировок за месяц одной точкой
-              // если между начальной и конечной датой больше трех лет, то на графике
-              // отображать среднее значение котировок за год одной точкой
 
               let startDate = moment(currencyRates[0].date);
               let endDate = moment(currencyRates[currencyRates.length-1].date);
@@ -257,6 +252,14 @@ module.exports = function(mongoose, {Currency, CurrencyRate}) {
         // получим дату рабочего дня
         if (!momentDate.isBusinessDay()) {
           date = momentDate.prevBusinessDay().toDate();
+
+          // Проверяем дополнительно, что дата не находится в списке дат, в которы ЦБ не выставлял курсы валют
+          // для минимизации обращения к серверу ЦБ РФ
+        }
+
+        let altDate = await DateMap.findOne({date}).select('altDate').exec();
+        if (altDate) {
+          date = altDate.altDate;
         }
         let currenciesQuotes = await this.aggregate()
           .unwind('$rates')
@@ -272,6 +275,25 @@ module.exports = function(mongoose, {Currency, CurrencyRate}) {
           let valutes = data.ValCurs.Valute;
 
           let currentDate = moment(data.ValCurs.$.Date, 'DD.MM.YYYY').toDate();
+          if ( !(currentDate.getTime() === date.getTime())) {
+
+              let dateM = new DateMap({
+                date: new Date(date.toISOString()).toISOString(),
+                altDate: new Date(currentDate.toISOString()).toISOString()
+              });
+
+              try {
+                await dateM.save();
+              } catch (err) {
+                if (err instanceof Error) {
+                  throw err;
+                } else {
+                  throw new Error(err);
+                }
+              }
+          }
+
+
           let currenciesQuotes = await this.aggregate()
             .unwind('$rates')
             .match({

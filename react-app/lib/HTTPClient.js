@@ -119,6 +119,7 @@ class HTTPClient {
           let dataSet = response.data;
           return dataSet;
         }).catch(function(error) {
+          alert('Потребуется больше времени для построения графика! Зайдите позже.')
           return error;
         })
 

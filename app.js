@@ -11,7 +11,7 @@ const MomentRange = require('moment-range');
 const moment = MomentRange.extendMoment(Moment);
 moment.locale('ru');
 moment.updateLocale('ru', {
-  workingWeekdays: [ 2, 3, 4, 5], // 0 - Воскресенье, 6 - Понедельник !!!
+  workingWeekdays: [ 2, 3, 4, 5],
 });
 const xml2js = require('xml2js');
 const iconv = require('iconv-lite');
