@@ -26,7 +26,7 @@
     "express": "~4.16.1",
     "http-errors": "~1.6.3",
     "immutable": "^4.0.0-rc.12",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.0",
     "level": "^6.0.0",
     "moment": "^2.24.0",
     "moment-business-days": "^1.1.3",
