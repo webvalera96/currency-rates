@@ -99,9 +99,3 @@ npm run-script jsdoc
 npm start
 ```
 Веб приложение доступно по адресу [http://<your_domain_name>:3000](http://localhost:3000)
-
-#### Демонстрационная версия
-
-Развернутая версия веб-приложения доступна по адресу
-
-http://alittlebasic.ru:3000/
